@@ -72,6 +72,8 @@ daily_benchmark_returns = np.exp(
 
 # Create tear sheet
 pf.create_full_tear_sheet(returns, positions=positions,
-                          transactions=transactions, benchmark_rets=daily_benchmark_returns)
+                          transactions=transactions,
+                          live_start_date='2015-10-22',
+                          benchmark_rets=daily_benchmark_returns)
 
 # %%

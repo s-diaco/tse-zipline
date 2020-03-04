@@ -1,3 +1,6 @@
+from datetime import datetime
+import pytz
+import zipline
 from zipline.api import order_target, record, symbol
 
 
@@ -32,3 +35,14 @@ def handle_data(context, data):
     record(AAPL=data.current(context.asset, 'price'),
            short_mavg=short_mavg,
            long_mavg=long_mavg)
+
+
+start = datetime(2014, 1, 1, 0, 0, 0, 0, pytz.utc)
+end = datetime(2018, 1, 1, 0, 0, 0, 0, pytz.utc)
+
+# %%
+perf = zipline.run_algorithm(start=start,
+                             end=end,
+                             initialize=initialize,
+                             capital_base=10000,
+                             handle_data=handle_data)

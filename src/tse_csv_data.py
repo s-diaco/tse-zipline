@@ -10,15 +10,16 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import tse_data_reader
 from tse_data_reader.ticker import Ticker
-from zipline.utils.calendars import get_calendar
+from zipline.utils.calendars import get_calendar, register_calendar
+from tse_calendar import TehranExchangeCalendar
 
 
 # %%
-def download_csv_data(symbol, start_date, end_date, freq, path, calendar):
+def download_csv_data(symbol, start_date, end_date, freq, path):
 
     ticker = Ticker(symbol)
     df = ticker.history(start_date=start_date, end_date=end_date)
-    df = format_tsetmc_price_data_for_zipline(df, calendar)
+    df = format_tsetmc_price_data_for_zipline(df)
 
     # save data to csv for later ingestion
     path = str(Path.home()) + '/' + '/' + path + '/daily'
@@ -31,7 +32,7 @@ def download_csv_data(symbol, start_date, end_date, freq, path, calendar):
 
 
 # %%
-def format_tsetmc_price_data_for_zipline(df, calendar):
+def format_tsetmc_price_data_for_zipline(df):
 
     df = df.rename(columns={'max_price': 'high', 'min_price': 'low', 'close_price': 'close',
                             'first_price': 'open', 'trade_volume': 'volume'}).loc[:, ['open', 'high', 'low', 'close', 'volume']]
@@ -46,7 +47,9 @@ def format_tsetmc_price_data_for_zipline(df, calendar):
     df = df.set_index(df.index.to_datetime().tz_localize('UTC'))
 
     # Get all expected trading sessions in this range and reindex.
-    sessions = get_calendar(calendar).sessions_in_range(
+    register_calendar('TSE', TehranExchangeCalendar, True)
+    trading_calendar = get_calendar('TSE')
+    sessions = get_calendar(trading_calendar).sessions_in_range(
         '2017-12-24', '2020-02-26')
 
     df = df.reindex(sessions)
@@ -59,8 +62,7 @@ download_csv_data(symbol='چکاپا',
                   start_date='1396-10-3',
                   end_date='1398-12-7',
                   freq='daily',
-                  path='.tse-data-zipline',
-                  calendar='NYSE')
+                  path='.tse_data_zipline')
 
 
 # %%
@@ -71,8 +73,8 @@ from zipline.data.bundles import register
 from zipline.data.bundles.csvdir import csvdir_equities
 
 
-start_session = pd.Timestamp('2017-12-26', tz='utc')
-end_session = pd.Timestamp('2020-02-26', tz='utc')
+start_session = pd.Timestamp('2017-12-26', tz='IRST')
+end_session = pd.Timestamp('2020-02-26', tz='IRST')
 
 # register the bundle
 register(
@@ -83,7 +85,7 @@ register(
         # path to directory containing the
 		'/home/diaco/.tse-data-zipline'
     ),
-    calendar_name='NYSE',  # Euronext Amsterdam
+    calendar_name='TSE',
     start_session=start_session,
     end_session=end_session
 )

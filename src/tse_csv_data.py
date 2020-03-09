@@ -18,7 +18,11 @@ from tse_calendar import TehranExchangeCalendar
 def download_csv_data(symbol, start_date, end_date, freq, path):
 
     ticker = Ticker(symbol)
-    df = ticker.history(start_date=start_date, end_date=end_date)
+    cols = ("max_price", "min_price", "close_price",
+            "first_price", "trade_volume")
+    df = ticker.history(start_date=start_date,
+                        end_date=end_date,
+                        columns=cols)
     df = format_tsetmc_price_data_for_zipline(df)
 
     # save data to csv for later ingestion
@@ -59,8 +63,8 @@ def format_tsetmc_price_data_for_zipline(df):
 
 # %%
 download_csv_data(symbol='چکاپا',
-                  start_date='1396-10-3',
-                  end_date='1398-12-7',
+                  start_date='1396-1-1',
+                  end_date='1398-9-1',
                   freq='daily',
                   path='.tse_data_zipline')
 

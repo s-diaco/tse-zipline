@@ -24,42 +24,14 @@ class TehranExchangeCalendar(TradingCalendar):
     Close Time: 12:30PM, IRST
     """
 
-    @property
-    def name(self):
-        """
-        The name of the exchange, which Zipline will look for
-        when we run our algorithm and pass TFS to
-        the --trading-calendar CLI flag.
-        """
-        return "TSE"
+    name = 'TSE'
 
-    @property
-    def tz(self):
-        """
-        The timezone in which we'll be running our algorithm.
-        """
-        return timezone("IRST")
+    tz = timezone('UTC')
 
-    @property
-    def open_time(self):
-        """
-        The time in which our exchange will open each day.
-        """
-        return time(8, 30)
+    open_times = (
+        (None, time(9, 31)),
+    )
 
-    @property
-    def close_time(self):
-        """
-        The time in which our exchange will close each day.
-        """
-        return time(12, 30)
-
-    @lazyval
-    def day(self):
-        """
-        The days on which our exchange will be open.
-        """
-        weekmask = "Sat Sun Mon Tue Wed"
-        return CustomBusinessDay(
-            weekmask=weekmask
-        )
+    close_times = (
+        (None, time(16)),
+    )

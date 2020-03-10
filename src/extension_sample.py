@@ -53,7 +53,6 @@ class TehranExchangeCalendar(TradingCalendar):
 register_calendar('TSE',  TehranExchangeCalendar(
     start=start_session,
     end=end_session))
-
 # register the bundle
 register(
     'tse_stocks',  # name we select for the bundle

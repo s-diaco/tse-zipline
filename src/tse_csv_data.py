@@ -15,12 +15,15 @@ from tse_calendar import TehranExchangeCalendar
 
 
 # %%
-def download_csv_data(symbol, start_date, end_date, freq, path):
+def download_csv_data(symbol, start_date, end_date, path):
 
     ticker = Ticker(symbol)
-    # cols = ("max_price", "min_price", "close_price", "first_price", "trade_volume")
+    cols = ("max_price", "min_price", "close_price",
+            "first_price", "trade_volume")
     df = ticker.history(start_date=start_date,
-                        end_date=end_date)
+                        end_date=end_date,
+                        columns=cols)
+
     df = format_tsetmc_price_data_for_zipline(df)
 
     # save data to csv for later ingestion
@@ -42,29 +45,26 @@ def format_tsetmc_price_data_for_zipline(df):
     df['split'] = 1
 
     # make sure that there is data for every day to avoid calendar errors
-    df = df.resample('1d').mean()
-    df.fillna(method='ffill', inplace=True)
-    
+    df = df.resample('1d').pad()
+
     # Ensure the df is indexed by UTC timestamps
     df = df.set_index(df.index.to_datetime().tz_localize('UTC'))
-    """
+
     # Get all expected trading sessions in this range and reindex.
-    register_calendar('TSE', TehranExchangeCalendar, True)
-    trading_calendar = get_calendar('TSE')
-    
-    sessions = get_calendar(trading_calendar).sessions_in_range(
-        '2017-12-24', '2020-02-26')
+    tse_cal = TehranExchangeCalendar()
+    sessions = tse_cal.sessions_in_range(
+        start_session_label=df.index[0],
+        end_session_label=df.index[-1])
 
     df = df.reindex(sessions)
-    """
+
     return df
 
 
 # %%
 download_csv_data(symbol='ذوب',
-                  start_date='1396-1-1',
-                  end_date='1398-9-1',
-                  freq='daily',
+                  start_date='1398-1-1',
+                  end_date='1398-12-8',
                   path='.tse_data_zipline')
 
 

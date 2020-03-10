@@ -25,6 +25,7 @@ end_session = pd.Timestamp('2020-02-26', tz='utc')
 tse_csv_dir_name = '.tse_data_zipline'
 path = str(Path.home()) + '/' + tse_csv_dir_name
 
+
 class TehranExchangeCalendar(TradingCalendar):
     """
     An exchange calendar for trading assets in Tehran stock exchange
@@ -37,6 +38,8 @@ class TehranExchangeCalendar(TradingCalendar):
 
     tz = timezone('UTC')
 
+    weekmask = '1110011'
+
     open_times = (
         (None, time(9, 31)),
     )
@@ -46,9 +49,11 @@ class TehranExchangeCalendar(TradingCalendar):
     )
 
 
+# register 'tse' calendar
 register_calendar('TSE',  TehranExchangeCalendar(
     start=start_session,
     end=end_session))
+
 # register the bundle
 register(
     'tse_stocks',  # name we select for the bundle

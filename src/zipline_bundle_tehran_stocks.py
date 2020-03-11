@@ -5,6 +5,7 @@ a bunlde to transform tehran_stocks module to a zipline bundle
 # %%
 import bs4 as bs
 import csv
+from logbook import Logger
 from datetime import datetime as dt
 from datetime import timedelta
 import numpy as np
@@ -24,53 +25,48 @@ data_subdir = 'tehran_stocks'
 user_home = Path.home()
 tse_data_path = user_home / '.zipline' / data_subdir
 source_database_file_path = user_home / 'tse' / 'stocks.db'
+log = Logger(__name__)
 
 # %%
-def load_data_table(file, show_progress=1):
+
+
+def load_data_table(file, show_progress=True):
     """
     loads a dataframe from sqlite database provided by 'tehran_stocks' module.
     """
 
-    conn = sqlite3.connect(str(source_database_file_path))
+    if show_progress:
+        log.info('Parsing raw data.')
+    con = sqlite3.connect(str(source_database_file_path))
     # db has two tables: stock_price and stocks
-    query="select * from stock_price limit 5"
-    df=pd.read_sql_query(query, conn)
-    conn.close()
-    print(df.head())
+    sql = "select * from stock_price limit 5"
+    date_fmt = '%Y%m%d'
+    df = pd.read_sql_query(sql=sql,
+                           con=con,
+                           index_col='dtyyyymmdd',
+                           parse_dates={'dtyyyymmdd': date_fmt})
+    con.close()
 
+    # df.sort_values(['ticker', 'dtyyyymmdd'],ascending=[True, True])
 
-    """
-    # Load data table from Quandl.zip file.
-    with ZipFile(file) as zip_file:
-        file_names = zip_file.namelist()
-        assert len(file_names) == 1, "Expected a single file"
-        quandl_prices = file_names.pop()
-        with zip_file.open(quandl_prices) as table_file:
-            if show_progress:
-                log.info('Parsing raw data.')
-            data_table = pd.read_csv(table_file,
-                                     names=column_names,
-                                     index_col=False,
-                                     usecols=[
-                                         0, 1, 2, 3, 4, 5, 6, 7, 8],
-                                     parse_dates=[1])
-            data_table.sort_values(['symbol', 'date'],
-                                   ascending=[True, True])
-
-    data_table.rename(columns={
+    df.index.rename('date', inplace=True)
+    df = df.rename(columns={
         'first': 'open',
         'high': 'high',
         'low': 'low',
         'close': 'close',
-        'vol': 'volume',
-    }, inplace=True, copy=False)
-"""
+        'vol': 'volume'
+    }).loc[:, ['open', 'high', 'low',
+               'close', 'volume']]
+    df['dividend'] = 0
+    df['split'] = 1
     if show_progress:
         log.info(df.info())
         log.info(df.head())
     return df
 
+
 # %%
-load_data_table(source_database_file_path, 1)
+load_data_table(source_database_file_path, True)
 
 # %%

@@ -1,75 +1,59 @@
-"""
-a bunlde to transform tehran_stocks module to a zipline bundle
-"""
-
-# %%
-import bs4 as bs
-import csv
-from logbook import Logger
-from datetime import datetime as dt
-from datetime import timedelta
+import pandas as pd
 import numpy as np
-from os import listdir, mkdir, remove
-from os.path import exists, isfile, join
 from pathlib import Path
 from six import iteritems
-import pandas as pd
-import pickle
-import requests
-from trading_calendars import register_calendar
-# from trading_calendars.exchange_calendar_binance import BinanceExchangeCalendar
-# from tse_calendar import TehranExchangeCalendar
-import sqlite3
-
-# %%
-data_subdir = 'tehran_stocks'
-user_home = Path.home()
-tse_data_path = user_home / '.zipline' / data_subdir
-source_database_file_path = user_home / 'tse' / 'stocks.db'
-log = Logger(__name__)
+from logbook import Logger
+from zipfile import ZipFile
 show_progress = True
+log = Logger(__name__)
+home = str(Path.home()) + "/"
+path = home + "your_data_file.zip"
+column_names = ["symbol",
+                "date",
+                "unadjusted_open",
+                "unadjusted_high",
+                "unadjusted_low",
+                "unadjusted_close",
+                "unadjusted_volume",
+                "dividends", "splits",
+                "adjusted_open",
+                "adjusted_high",
+                "adjusted_low",
+                "adjusted_close",
+                "adjusted_volume"]
 
-# %%
-
-
-def load_data_table(file, show_progress=True):
-    """
-    loads a dataframe from sqlite database provided by 'tehran_stocks' module.
-    """
-
+def load_data_table(file, show_progress=show_progress):
+    # Load data table from Quandl.zip file.
+    with ZipFile(file) as zip_file:
+        file_names = zip_file.namelist()
+        assert len(file_names) == 1, "Expected a single file"
+        quandl_prices = file_names.pop()
+        with zip_file.open(quandl_prices) as table_file:
+            if show_progress:
+                log.info('Parsing raw data.')
+            data_table = pd.read_csv(table_file,
+                                     names=column_names,
+                                     index_col=False,
+                                     usecols=[
+                                         0, 1, 2, 3, 4, 5, 6, 7, 8],
+                                     parse_dates=[1])
+            data_table.sort_values(['symbol',
+                                    'date'],
+                                   ascending=[True, True])
+    data_table.rename(columns={
+        'unadjusted_open': 'open',
+        'unadjusted_high': 'high',
+        'unadjusted_low': 'low',
+        'unadjusted_close': 'close',
+        'unadjusted_volume': 'volume',
+        'splits': 'split_ratio'
+    }, inplace=True, copy=False)
     if show_progress:
-        log.info('Parsing raw data.')
-    con = sqlite3.connect(str(file))
-    # db has two tables: stock_price and stocks
-    sql = "select * from stock_price limit 5"
-    date_fmt = '%Y%m%d'
-    df = pd.read_sql_query(sql=sql,
-                           con=con,
-                           index_col=False,
-                           parse_dates={'dtyyyymmdd': date_fmt})
-    con.close()
-    df = df.rename(columns={
-        'code': 'symbol',
-        'first': 'open',
-        'high': 'high',
-        'low': 'low',
-        'close': 'close',
-        'vol': 'volume'
-    })
-    df.sort_values(['symbol',
-                    'date'],
-                    ascending=[True, True])
-    # df['dividend'] = 0
-    # df['split'] = 1
-    if show_progress:
-        log.info(df.info())
-        log.info(df.head())
-        log.info('Got dada from tehran_stocks.')
-    return df
+        log.info(data_table.info())
+        log.info(data_table.head())
+    return data_table
 
-
-# %%
-def gen_asset_metadata(data, show_progress=True):
+def gen_asset_metadata(data, show_progress):
     if show_progress:
         log.info('Generating asset metadata.')
     data = data.groupby(
@@ -88,10 +72,7 @@ def gen_asset_metadata(data, show_progress=True):
         log.info(data.head())
     return data
 
-# %%
-
-
-def parse_splits(data, show_progress=True):
+def parse_splits(data, show_progress):
     if show_progress:
         log.info('Parsing split data.')
     data['split_ratio'] = 1.0 / data.split_ratio
@@ -108,8 +89,7 @@ def parse_splits(data, show_progress=True):
         log.info(data.head())
     return data
 
-
-def parse_dividends(data, show_progress=True):
+def parse_dividends(data, show_progress):
     if show_progress:
         log.info('Parsing dividend data.')
     data['record_date'] = data['declared_date'] = data['pay_date'] = pd.NaT
@@ -119,9 +99,6 @@ def parse_dividends(data, show_progress=True):
         log.info(data.info())
         log.info(data.head())
     return data
-
-# %%
-
 
 def parse_pricing_and_vol(data,
                           sessions,
@@ -135,9 +112,6 @@ def parse_pricing_and_vol(data,
         ).fillna(0.0)
         yield asset_id, asset_data
 
-# %%
-
-
 def ingest(environ,
            asset_db_writer,
            minute_bar_writer,
@@ -149,8 +123,7 @@ def ingest(environ,
            cache,
            show_progress,
            output_dir):
-    raw_data = load_data_table(
-        source_database_file_path, show_progress=show_progress)
+    raw_data = load_data_table(path, show_progress=show_progress)
     asset_metadata = gen_asset_metadata(
         raw_data[['symbol', 'date']],
         show_progress

@@ -2,6 +2,7 @@
 A custom zipline csv bundle for Tehran stock exchange.
 """
 # %% Importing some modules
+from zipline.data.bundles import register, zipline_bundle_tehran_stocks
 from zipline.data.bundles.csvdir import csvdir_equities
 from zipline.data.bundles import register
 # for setting our open and close times
@@ -54,6 +55,9 @@ register_calendar('TSE',  TehranExchangeCalendar(
     start=start_session,
     end=end_session))
 # register the bundle
+"""
+command: zipline ingest --bundle tse_stocks
+"""
 register(
     'tse_stocks',  # name we select for the bundle
     csvdir_equities(
@@ -67,10 +71,12 @@ register(
     end_session=end_session
 )
 
+"""
+command: zipline ingest --bundle 'zipline_bundle_tehran_stocks'
+"""
+register('zipline_bundle_tehran_stocks',
+         zipline_bundle_tehran_stocks.ingest, calendar_name='TSE')
 
-"""
-terminal cmc: zipline ingest --bundle tse_stocks
-"""
 """
 https://github.com/quantopian/zipline/issues/2018
 """

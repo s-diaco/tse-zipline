@@ -15,7 +15,7 @@ from tse_calendar import TehranExchangeCalendar
 
 
 # %%
-def download_csv_data(symbol, start_date, end_date, path):
+def download_csv_data(symbol, start_date, end_date, path, freq):
 
     ticker = Ticker(symbol)
     cols = ("max_price", "min_price", "close_price",
@@ -27,20 +27,25 @@ def download_csv_data(symbol, start_date, end_date, path):
     df = format_tsetmc_price_data_for_zipline(df)
 
     # save data to csv for later ingestion
-    path = str(Path.home()) + '/' + path + '/daily'
-    Path(path).mkdir(parents=True, exist_ok=True)
-    df.to_csv(path + '/' + symbol + '.csv', header=True, index=True)
+    user_home = Path.home()
+    path = user_home / path / freq
+    path.mkdir(parents=True, exist_ok=True)
+    csv_file_name = '{}.csv'.format(ticker.info()[0])
+    df.to_csv(path / csv_file_name, header=True, index=True)
 
     # plot the time series
     df.close.plot(
-        title='{} prices --- {}:{}'.format(ticker, start_date, end_date))
+        title='{}: {} , {}'.format(csv_file_name, start_date, end_date))
 
 
 # %%
 def format_tsetmc_price_data_for_zipline(df):
 
-    df = df.rename(columns={'max_price': 'high', 'min_price': 'low', 'close_price': 'close',
-                            'first_price': 'open', 'trade_volume': 'volume'}).loc[:, ['open', 'high', 'low', 'close', 'volume']]
+    df = df.rename(columns={'max_price': 'high',
+                            'min_price': 'low',
+                            'close_price': 'close',
+                            'first_price': 'open',
+                            'trade_volume': 'volume'}).loc[:, ['open','high', 'low', 'close', 'volume']]
     df['dividend'] = 0
     df['split'] = 1
 
@@ -65,7 +70,8 @@ def format_tsetmc_price_data_for_zipline(df):
 download_csv_data(symbol='ذوب',
                   start_date='1398-1-1',
                   end_date='1398-12-8',
-                  path='.tse_data_zipline')
+                  path='.tse_data_zipline',
+                  freq='daily')
 
 
 # %%
